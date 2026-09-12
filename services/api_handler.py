@@ -430,7 +430,6 @@ class AudioControlHandler(BaseHTTPRequestHandler):
             elif path_only == "/api/solo/start":
                 ch = data.get("channel")
                 if ch is not None and self.backend.start_solo(int(ch)):
-                    self.backend.play_channel_test(int(ch))
                     response = {"status": "success", "solo": self.backend.get_solo_status()}
                     status_code = 200
                 else:

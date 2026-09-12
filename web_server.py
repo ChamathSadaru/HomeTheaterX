@@ -197,5 +197,95 @@ def main():
             print("Stopping server...")
 
 
+def setup_crash_logger():
+    """Captures unhandled exceptions and logs them with stacktrace to crash_log.txt."""
+    import traceback
+    def handle_exception(exc_type, exc_value, exc_traceback):
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+            return
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        err_msg = f"\n[CRASH DETECTED at {timestamp}]\n" + "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+        try:
+            log_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+            log_file = os.path.join(log_dir, "crash_log.txt")
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(err_msg + "\n" + "-"*60 + "\n")
+        except Exception:
+            pass
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+    sys.excepthook = handle_exception
+    if hasattr(threading, 'excepthook'):
+        def handle_thread_exception(args):
+            handle_exception(args.exc_type, args.exc_value, args.exc_traceback)
+        threading.excepthook = handle_thread_exception
+
+
+def run_watchdog_supervisor():
+    """
+    Guardian Supervisor Process that monitors HomeTheaterX. If the child process crashes
+    or terminates unexpectedly (non-zero exit code), it logs the crash and automatically
+    relaunches HomeTheaterX within 1 second.
+    """
+    import subprocess
+    crash_timestamps = []
+    
+    while True:
+        env = os.environ.copy()
+        env["_HTX_SUPERVISED"] = "1"
+        
+        if getattr(sys, 'frozen', False):
+            cmd = [sys.executable] + sys.argv[1:]
+        else:
+            cmd = [sys.executable, os.path.abspath(__file__)] + sys.argv[1:]
+            
+        creation_flags = 0
+        if sys.platform.startswith("win"):
+            creation_flags = subprocess.CREATE_NO_WINDOW if not sys.stdout or not sys.stdout.isatty() else 0
+
+        try:
+            proc = subprocess.Popen(cmd, env=env, creationflags=creation_flags)
+            exit_code = proc.wait()
+            
+            # Normal clean exit (e.g. user clicked Exit from System Tray)
+            if exit_code == 0:
+                sys.exit(0)
+                
+            # Non-zero exit code indicates crash or abnormal termination
+            now = time.time()
+            crash_timestamps = [t for t in crash_timestamps if now - t < 30]
+            crash_timestamps.append(now)
+            
+            timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
+            log_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+            log_file = os.path.join(log_dir, "crash_log.txt")
+            try:
+                with open(log_file, "a", encoding="utf-8") as f:
+                    f.write(f"[{timestamp_str}] Process terminated abnormally with exit code: {exit_code}. Auto-restarting...\n")
+            except Exception:
+                pass
+                
+            if len(crash_timestamps) >= 5:
+                try:
+                    with open(log_file, "a", encoding="utf-8") as f:
+                        f.write(f"[{timestamp_str}] [CRITICAL] 5 crashes detected in 30s. Stopping restart loop to prevent system thrashing.\n")
+                except Exception:
+                    pass
+                sys.exit(exit_code)
+                
+            time.sleep(1.0)
+        except KeyboardInterrupt:
+            sys.exit(0)
+        except Exception as sup_err:
+            print(f"[Watchdog] Supervisor exception: {sup_err}")
+            sys.exit(1)
+
+
 if __name__ == "__main__":
-    main()
+    # If not yet supervised by the Watchdog Guardian, launch the supervisor
+    if os.environ.get("_HTX_SUPERVISED") != "1":
+        run_watchdog_supervisor()
+    else:
+        setup_crash_logger()
+        main()

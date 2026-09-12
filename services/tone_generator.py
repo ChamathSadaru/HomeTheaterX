@@ -1,10 +1,14 @@
 import os
+import sys
 import threading
 import wave
 import numpy as np
-import sounddevice as sd
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 AUDIO_DIR = os.path.join(BASE_DIR, "web", "audio")
 
 VOICE_FILES = {
@@ -19,6 +23,7 @@ VOICE_FILES = {
 def get_sounddevice_index(friendly_name):
     """Finds matching output device index in sounddevice using substrings."""
     try:
+        import sounddevice as sd
         devices = sd.query_devices()
         if not friendly_name:
             default_out = sd.default.device[1]
@@ -43,10 +48,7 @@ def get_sounddevice_index(friendly_name):
         return default_out if default_out is not None else 0
     except Exception as e:
         print(f"Error finding sounddevice index: {e}")
-        try:
-            return sd.default.device[1]
-        except Exception:
-            return 0
+        return 0
 
 
 def play_channel_test(channel_idx, channel_count, current_device_name):
@@ -62,6 +64,7 @@ def play_channel_test(channel_idx, channel_count, current_device_name):
 def _play_channel_test_sync(channel_idx, channel_count, current_device_name):
     """Synchronous audio playback with multi-channel routing and safe fallback."""
     try:
+        import sounddevice as sd
         wav_name = VOICE_FILES.get(channel_idx, "voice_center.wav")
         wav_path = os.path.join(AUDIO_DIR, wav_name)
         

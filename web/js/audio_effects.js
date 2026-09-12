@@ -453,6 +453,10 @@ export async function toggleSpeakerSolo(id) {
     }
 
     applySoloVisuals();
+    
+    // Safely announce the channel voice using the Web Audio Engine (0% Crash Risk)
+    playSpokenChannelAnnouncement(id);
+
     if (id === "subwoofer") {
       showToast("Subwoofer Isolated", "Playing 60Hz crossover tone & enabled Equalizer APO Bass Management.", "amber");
     } else {
