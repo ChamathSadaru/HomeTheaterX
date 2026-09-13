@@ -492,15 +492,21 @@
                 <i class="fa-solid fa-microphone-lines text-[11px]"></i>
                 <span>Room Calibrations</span>
             </button>
+            <button id="tab-scopes"
+                class="px-4 py-2 rounded-xl text-xs font-bold tracking-wider font-mono uppercase bg-zinc-950 border border-zinc-850 text-zinc-400 hover:text-white transition-all flex items-center gap-2">
+                <i class="fa-solid fa-wave-square text-[11px]"></i>
+                <span>Acoustic Scopes</span>
+            </button>
             <button id="tab-receiver"
                 class="px-4 py-2 rounded-xl text-xs font-bold tracking-wider font-mono uppercase bg-zinc-950 border border-zinc-850 text-zinc-400 hover:text-white transition-all flex items-center gap-2">
                 <i class="fa-solid fa-circle-play text-[11px]"></i>
                 <span>Receiver Console</span>
             </button>
             <button id="tab-settings"
-                class="px-4 py-2 rounded-xl text-xs font-bold tracking-wider font-mono uppercase bg-zinc-950 border border-zinc-850 text-zinc-400 hover:text-white transition-all flex items-center gap-2">
+                class="relative px-4 py-2 rounded-xl text-xs font-bold tracking-wider font-mono uppercase bg-zinc-950 border border-zinc-850 text-zinc-400 hover:text-white transition-all flex items-center gap-2">
                 <i class="fa-solid fa-gears text-[11px]"></i>
                 <span>Settings</span>
+                <span id="tab-update-badge" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]"></span>
             </button>
         </div>
 
@@ -515,9 +521,16 @@
                     class="relative speaker-deck-stage w-full rounded-2xl border border-white/10 pt-20 pb-8 px-6 mb-4 flex flex-col items-center justify-end min-h-[410px] shadow-2xl backdrop-blur-xl">
 
                     <!-- Stage Monitoring Text Left Corner -->
-                    <div id="lbl-stage-monitor"
-                        class="absolute top-6 left-6 z-20 font-mono text-[9px] text-zinc-555 tracking-widest uppercase transition-all duration-200">
-                        Acoustic Stage Monitor
+                    <div class="absolute top-6 left-6 z-20 flex items-center gap-2.5 select-none">
+                        <div id="lbl-stage-monitor"
+                            class="font-mono text-[9px] text-zinc-500 tracking-widest uppercase transition-all duration-200">
+                            Acoustic Stage Monitor
+                        </div>
+                        <span id="badge-stream-mode"
+                            class="px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-amber-500/10 text-amber-400 border-amber-500/30 cursor-default"
+                            title="Smart Stream Channel Detection: Live Monitoring">
+                            5.1 SURROUND
+                        </span>
                     </div>
 
 
@@ -1546,7 +1559,150 @@
                 </div>
             </div>
 
-            <!-- Sub-View 3: Receiver Console -->
+            <!-- Sub-View 3: 6-Channel Acoustic Scopes Studio -->
+            <div id="view-scopes" class="hidden w-full max-w-5xl mx-auto my-auto flex-col gap-4 font-mono">
+                
+                <!-- Scopes Header & Mode Bar -->
+                <div class="flex items-center justify-between bg-zinc-950/40 border border-zinc-900 rounded-2xl px-5 py-3.5 backdrop-blur-md">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                            <i class="fa-solid fa-wave-square text-xs"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-bold text-white uppercase tracking-wider">6-Channel Real-Time Acoustic Scopes</h2>
+                            <p class="text-[9px] text-zinc-500 uppercase tracking-widest mt-0.5">Discrete Multi-Channel Oscilloscope & Spectrum Telemetry (60 FPS)</p>
+                        </div>
+                    </div>
+
+                    <!-- Visualizer Mode Controls -->
+                    <div class="flex items-center gap-1.5 bg-zinc-950 border border-zinc-850 p-1 rounded-xl">
+                        <button class="scope-mode-btn px-3 py-1 rounded-lg text-xs font-mono font-bold uppercase transition-all bg-amber-500 text-black shadow-[0_0_10px_rgba(245,158,11,0.3)] cursor-pointer" data-mode="waveform">
+                            Waveform
+                        </button>
+                        <button class="scope-mode-btn px-3 py-1 rounded-lg text-xs font-mono uppercase transition-all bg-zinc-900 border border-zinc-850 text-zinc-400 hover:text-white cursor-pointer" data-mode="bars">
+                            Bars
+                        </button>
+                        <button class="scope-mode-btn px-3 py-1 rounded-lg text-xs font-mono uppercase transition-all bg-zinc-900 border border-zinc-850 text-zinc-400 hover:text-white cursor-pointer" data-mode="pixel">
+                            Laser Grid
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 6-Channel Grid (3 rows of 2 columns) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 w-full">
+                    
+                    <!-- Channel 1: Front Left (Tower L) -->
+                    <div class="bg-zinc-950/60 border border-zinc-850/80 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl relative overflow-hidden backdrop-blur-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">FL</span>
+                                <svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="15" r="3.5"/></svg>
+                                <span class="text-xs font-bold text-white tracking-wide">Front Left (Tower L)</span>
+                            </div>
+                            <span id="scope-val-towerL" class="text-[10px] font-bold text-amber-400 font-mono">-INF dB</span>
+                        </div>
+                        <div class="relative w-full h-24 bg-black/80 rounded-xl border border-zinc-900 overflow-hidden flex items-center justify-center">
+                            <canvas id="scope-canvas-towerL" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                            <div id="scope-meter-towerL" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+
+                    <!-- Channel 2: Center Channel -->
+                    <div class="bg-zinc-950/60 border border-zinc-850/80 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl relative overflow-hidden backdrop-blur-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">C</span>
+                                <svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="6.5" cy="12" r="2.2"/><circle cx="12" cy="12" r="1.5"/><circle cx="17.5" cy="12" r="2.2"/></svg>
+                                <span class="text-xs font-bold text-white tracking-wide">Center (Dialogue)</span>
+                            </div>
+                            <span id="scope-val-center" class="text-[10px] font-bold text-emerald-400 font-mono">-INF dB</span>
+                        </div>
+                        <div class="relative w-full h-24 bg-black/80 rounded-xl border border-zinc-900 overflow-hidden flex items-center justify-center">
+                            <canvas id="scope-canvas-center" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                            <div id="scope-meter-center" class="bg-emerald-400 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+
+                    <!-- Channel 3: Front Right (Tower R) -->
+                    <div class="bg-zinc-950/60 border border-zinc-850/80 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl relative overflow-hidden backdrop-blur-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">FR</span>
+                                <svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="15" r="3.5"/></svg>
+                                <span class="text-xs font-bold text-white tracking-wide">Front Right (Tower R)</span>
+                            </div>
+                            <span id="scope-val-towerR" class="text-[10px] font-bold text-amber-400 font-mono">-INF dB</span>
+                        </div>
+                        <div class="relative w-full h-24 bg-black/80 rounded-xl border border-zinc-900 overflow-hidden flex items-center justify-center">
+                            <canvas id="scope-canvas-towerR" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                            <div id="scope-meter-towerR" class="bg-amber-500 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+
+                    <!-- Channel 4: Surround Left (SL) -->
+                    <div class="bg-zinc-950/60 border border-zinc-850/80 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl relative overflow-hidden backdrop-blur-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/30">SL</span>
+                                <svg class="w-3.5 h-3.5 text-sky-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="16" rx="2"/><circle cx="12" cy="12" r="3.5"/></svg>
+                                <span class="text-xs font-bold text-white tracking-wide">Surround Left (Rear L)</span>
+                            </div>
+                            <span id="scope-val-surroundL" class="text-[10px] font-bold text-sky-400 font-mono">-INF dB</span>
+                        </div>
+                        <div class="relative w-full h-24 bg-black/80 rounded-xl border border-zinc-900 overflow-hidden flex items-center justify-center">
+                            <canvas id="scope-canvas-surroundL" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                            <div id="scope-meter-surroundL" class="bg-sky-400 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+
+                    <!-- Channel 5: Subwoofer (LFE / Bass) -->
+                    <div class="bg-zinc-950/60 border border-zinc-850/80 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl relative overflow-hidden backdrop-blur-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-500/10 text-red-400 border border-red-500/30">SUB</span>
+                                <svg class="w-3.5 h-3.5 text-red-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/></svg>
+                                <span class="text-xs font-bold text-white tracking-wide">Subwoofer (LFE / Bass)</span>
+                            </div>
+                            <span id="scope-val-subwoofer" class="text-[10px] font-bold text-red-400 font-mono">-INF dB</span>
+                        </div>
+                        <div class="relative w-full h-24 bg-black/80 rounded-xl border border-zinc-900 overflow-hidden flex items-center justify-center">
+                            <canvas id="scope-canvas-subwoofer" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                            <div id="scope-meter-subwoofer" class="bg-red-500 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+
+                    <!-- Channel 6: Surround Right (SR) -->
+                    <div class="bg-zinc-950/60 border border-zinc-850/80 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl relative overflow-hidden backdrop-blur-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/30">SR</span>
+                                <svg class="w-3.5 h-3.5 text-sky-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="16" rx="2"/><circle cx="12" cy="12" r="3.5"/></svg>
+                                <span class="text-xs font-bold text-white tracking-wide">Surround Right (Rear R)</span>
+                            </div>
+                            <span id="scope-val-surroundR" class="text-[10px] font-bold text-sky-400 font-mono">-INF dB</span>
+                        </div>
+                        <div class="relative w-full h-24 bg-black/80 rounded-xl border border-zinc-900 overflow-hidden flex items-center justify-center">
+                            <canvas id="scope-canvas-surroundR" class="w-full h-full"></canvas>
+                        </div>
+                        <div class="w-full bg-zinc-900 rounded-full h-1.5 overflow-hidden">
+                            <div id="scope-meter-surroundR" class="bg-sky-400 h-full w-0 transition-all duration-75"></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Sub-View 4: Receiver Console -->
             <div id="view-receiver" class="hidden w-full max-w-5xl mx-auto my-auto flex-col gap-4">
                 <div id="receiver-console-deck"
                     class="w-full bg-gradient-to-b from-zinc-900 via-zinc-955 to-zinc-950 border border-zinc-800 rounded-2xl p-5 shadow-2xl relative overflow-hidden flex flex-col gap-4">
@@ -1850,6 +2006,40 @@
                     </select>
                 </div>
 
+                <!-- Software Updates & Version -->
+                <div class="flex flex-col gap-3 bg-zinc-950/40 border border-zinc-900 rounded-2xl px-5 py-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <p class="text-xs font-bold text-white uppercase tracking-wider">Software Updates</p>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 border border-amber-500/30 text-amber-400">v2.0.0</span>
+                            </div>
+                            <p id="update-status-label" class="text-[9px] text-zinc-500 tracking-widest mt-1 uppercase">Repository: ChamathSadaru/HomeTheaterX-V2</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-check-updates"
+                                class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-mono uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+                                <span>Check for Updates</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Update available banner inside settings -->
+                    <div id="settings-update-banner" class="hidden flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-arrow-up text-amber-500 text-sm"></i>
+                            <div>
+                                <p id="settings-update-title" class="text-xs font-bold text-amber-400">New version available!</p>
+                                <p id="settings-update-subtitle" class="text-[9px] text-zinc-400">Click to view release notes and download.</p>
+                            </div>
+                        </div>
+                        <button id="btn-open-update-modal"
+                            class="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold font-mono uppercase tracking-wider transition-all cursor-pointer">
+                            Update Now
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Subwoofer lock info -->
                 <div class="flex items-center gap-3 bg-zinc-950/40 border border-zinc-900 rounded-2xl px-5 py-4">
                     <i class="fa-solid fa-lock text-amber-500"></i>
@@ -1864,6 +2054,68 @@
                 </p>
             </div>
 
+        </div>
+
+        <!-- High-Fidelity Update Modal -->
+        <div id="modal-update"
+            class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all duration-300">
+            <div class="relative w-full max-w-lg bg-zinc-950 border border-zinc-800/80 rounded-2xl shadow-2xl p-6 font-mono text-zinc-200 flex flex-col gap-4">
+                
+                <!-- Modal Header -->
+                <div class="flex items-start justify-between border-b border-zinc-850 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-lg">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                HomeTheaterX Update
+                                <span id="modal-update-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-black">v2.1.0</span>
+                            </h3>
+                            <p id="modal-update-tagline" class="text-[10px] text-zinc-400 mt-0.5">A new version is available for download</p>
+                        </div>
+                    </div>
+                    <button id="btn-close-update-modal" class="text-zinc-500 hover:text-white transition-colors cursor-pointer text-sm">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Release Notes Container -->
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-[10px] text-zinc-400 uppercase tracking-wider font-bold">Release Notes</span>
+                    <div id="modal-release-notes" class="bg-zinc-900/60 border border-zinc-850/80 rounded-xl p-3.5 max-h-48 overflow-y-auto text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed font-sans">
+                        Loading release details...
+                    </div>
+                </div>
+
+                <!-- Download Progress Area (Hidden by default until download starts) -->
+                <div id="modal-download-progress-box" class="hidden flex flex-col gap-2 bg-zinc-900/40 border border-zinc-850 rounded-xl p-3.5">
+                    <div class="flex justify-between text-xs font-mono">
+                        <span id="modal-download-status" class="text-amber-400 font-bold">Downloading Update...</span>
+                        <span id="modal-download-percent" class="text-white font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-zinc-950 rounded-full h-2 overflow-hidden border border-zinc-800">
+                        <div id="modal-download-bar" class="bg-amber-500 h-full w-0 transition-all duration-200"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-zinc-500 font-mono">
+                        <span id="modal-download-speed">0.0 MB/s</span>
+                        <span id="modal-download-size">0 MB / 0 MB</span>
+                    </div>
+                </div>
+
+                <!-- Modal Actions -->
+                <div class="flex items-center justify-end gap-2.5 pt-2">
+                    <button id="btn-cancel-update"
+                        class="px-4 py-2 rounded-xl text-xs font-mono font-bold text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 transition-all cursor-pointer">
+                        Later
+                    </button>
+                    <button id="btn-start-update"
+                        class="px-5 py-2 rounded-xl text-xs font-mono font-bold text-black bg-amber-500 hover:bg-amber-400 transition-all flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-download"></i>
+                        <span id="btn-start-update-text">Download & Install</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <script type="module" src="js/app.js"></script>

@@ -101,6 +101,25 @@ class UIManager:
                 _, muted = self.backend.get_master_volume()
                 return "Unmute" if muted else "Mute"
 
+            def on_restart(icon, item):
+                icon.stop()
+                if self.window:
+                    try:
+                        self.window.events.closing -= self.on_window_closing
+                    except Exception:
+                        pass
+                    self.window.destroy()
+                if os.environ.get("_HTX_SUPERVISED") == "1":
+                    os._exit(42)
+                else:
+                    import subprocess
+                    if getattr(sys, 'frozen', False):
+                        cmd = [sys.executable] + sys.argv[1:]
+                    else:
+                        cmd = [sys.executable, os.path.abspath(sys.argv[0])] + sys.argv[1:]
+                    subprocess.Popen(cmd)
+                    os._exit(0)
+
             def on_exit(icon, item):
                 icon.stop()
                 if self.window:
@@ -117,6 +136,7 @@ class UIManager:
                 pystray.MenuItem(mute_label, on_toggle_mute),
                 pystray.MenuItem("Reset Balance", on_reset_balance),
                 pystray.MenuItem("Start with Windows", on_toggle_startup, checked=startup_checked),
+                pystray.MenuItem("Restart", on_restart),
                 pystray.MenuItem("Exit", on_exit)
             )
 

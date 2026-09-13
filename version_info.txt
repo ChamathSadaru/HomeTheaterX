@@ -1,0 +1,35 @@
+# UTF-8 encoded version resource file for PyInstaller
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(2, 1, 0, 0),
+    prodvers=(2, 1, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040904B0',
+          [
+            StringStruct(u'CompanyName',      u'ChamathZ'),
+            StringStruct(u'FileDescription',  u'HomeTheaterX - 5.1 Surround Sound DSP Controller'),
+            StringStruct(u'FileVersion',      u'2.1.0.0'),
+            StringStruct(u'InternalName',     u'HomeTheaterX'),
+            StringStruct(u'LegalCopyright',   u'Copyright (C) 2026 ChamathZ. All rights reserved.'),
+            StringStruct(u'OriginalFilename', u'HomeTheaterX.exe'),
+            StringStruct(u'ProductName',      u'HomeTheaterX'),
+            StringStruct(u'ProductVersion',   u'2.1.0.0'),
+            StringStruct(u'Comments',         u'Professional 5.1 Audio Control Suite with Equalizer APO Integration'),
+            StringStruct(u'LegalTrademarks',  u'HomeTheaterX (TM) is a trademark of ChamathZ'),
+          ]
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct(u'Translation', [0x0409, 1200])])
+  ]
+)

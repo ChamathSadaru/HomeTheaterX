@@ -25,6 +25,28 @@ html, body {
     filter: grayscale(0.6);
 }
 
+/* --- Smart Auto-Detection Stream Dimming (Stereo 2.1 Mode on 5.1 layout) --- */
+.speaker-stream-dimmed {
+    opacity: 0.28 !important;
+    filter: grayscale(0.85) brightness(0.65) drop-shadow(0 0 0px transparent) !important;
+    transform: scale(0.96);
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), filter 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.speaker-stream-dimmed .speaker-glow-light {
+    opacity: 0 !important;
+    display: none !important;
+}
+
+.card-stream-dimmed {
+    opacity: 0.42;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-stream-dimmed:hover {
+    opacity: 0.90;
+}
+
 .speaker-clicked-glow {
     filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 48px rgba(245, 158, 11, 0.65)) !important;
     transform: scale(1.04) !important;

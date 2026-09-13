@@ -135,5 +135,6 @@
       },
       "master": null
     }
-  }
+  },
+  "ddl_active": true
 }

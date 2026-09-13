@@ -47,7 +47,7 @@ if device_names:
 # Global configuration
 PORT = 5000
 server_instance = None
-cached_ddl_state = False
+cached_ddl_state = config_manager.get("ddl_active", False)
 ui_manager = None
 ws_manager = None
 
@@ -61,11 +61,17 @@ def notify_if_enabled(title, message, dedupe_key=None):
 def update_ddl_callback(state):
     global cached_ddl_state
     cached_ddl_state = state
+    config_manager.set("ddl_active", state)
+    if ws_manager:
+        ws_manager.broadcast_sync({"type": "ddl_status", "ddl_active": state})
 
 
 def set_ddl_state(state):
     global cached_ddl_state
     cached_ddl_state = state
+    config_manager.set("ddl_active", state)
+    if ws_manager:
+        ws_manager.broadcast_sync({"type": "ddl_status", "ddl_active": state})
 
 
 def get_local_ip():
@@ -151,7 +157,10 @@ def main():
     def on_dolby_ready(is_on):
         global cached_ddl_state
         cached_ddl_state = is_on
+        config_manager.set("ddl_active", is_on)
         print(f"[Startup] Dolby verification complete (DDL: {'ON' if is_on else 'OFF'}). Displaying splash screen...")
+        if ws_manager:
+            ws_manager.broadcast_sync({"type": "ddl_status", "ddl_active": is_on})
         
         # Display splash screen
         splash_thread = threading.Thread(target=ui_manager.run_splash_screen_thread, args=(BASE_DIR,), daemon=True)
@@ -251,6 +260,11 @@ def run_watchdog_supervisor():
             # Normal clean exit (e.g. user clicked Exit from System Tray)
             if exit_code == 0:
                 sys.exit(0)
+
+            # Planned restart requested (e.g. user clicked Restart in System Tray)
+            if exit_code == 42:
+                time.sleep(0.5)
+                continue
                 
             # Non-zero exit code indicates crash or abnormal termination
             now = time.time()

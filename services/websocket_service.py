@@ -210,7 +210,8 @@ class WebSocketManager:
                 "is_stereo": (self.backend.channel_count <= 2),
                 "media": media_data,
                 "active_profile": self.config_manager.get("active_profile", "User"),
-                "calibration_enabled": self.config_manager.get("calibration_enabled", False)
+                "calibration_enabled": self.config_manager.get("calibration_enabled", False),
+                "ddl_active": self.config_manager.get("ddl_active", False)
             }
             await websocket.send(json.dumps(payload))
         except Exception as err:
@@ -233,6 +234,14 @@ class WebSocketManager:
         
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+
+    def broadcast_sync(self, payload):
+        """Thread-safe synchronous wrapper for broadcasting events from any thread."""
+        if self.loop and self.running:
+            try:
+                asyncio.run_coroutine_threadsafe(self.broadcast(payload), self.loop)
+            except Exception:
+                pass
 
     # -------------------------------------------------------------------------
     # Periodic Asynchronous Broadcasters

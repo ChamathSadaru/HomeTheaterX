@@ -4,6 +4,9 @@ import { state, ids, channelIndexMap, setUserDragging, lockPollFor } from './sta
 import { initOscilloscope, visualizerState } from './visualizer.js';
 import { initRoomCalibrations, applyCalibrationUI } from './calibration.js';
 import { initWebSocket, sendWsMessage, isWsConnected } from './ws.js';
+import { initUpdater } from './updater.js';
+import { initBluetooth } from './bluetooth.js';
+import { initChannelScopes, setupAllHighDpiCanvases } from './channel_scopes.js';
 import {
   initDdlToggle,
   initEightdRotation,
@@ -964,6 +967,66 @@ class LowPassBassDetector {
 
 const bassDetector = new LowPassBassDetector(90, 60);
 
+// Smart Stream Topology Auto-Detection (Stereo 2.1 vs 5.1 Surround)
+let isStereoStreamDetected = false;
+let lastSurroundActiveTime = 0;
+let lastFrontActiveTime = 0;
+
+export function updateStreamTopologyUI(isStereo) {
+  state.isStereoStream = isStereo;
+
+  const surroundIds = ["center", "surroundL", "surroundR"];
+  surroundIds.forEach(id => {
+    const wrapper = document.getElementById("speaker-wrapper-" + id);
+    const card = document.getElementById("card-" + id);
+    if (wrapper) {
+      if (isStereo && !state.solo.active) {
+        wrapper.classList.add("speaker-stream-dimmed");
+      } else {
+        wrapper.classList.remove("speaker-stream-dimmed");
+      }
+    }
+    if (card) {
+      if (isStereo && !state.solo.active) {
+        card.classList.add("card-stream-dimmed");
+      } else {
+        card.classList.remove("card-stream-dimmed");
+      }
+    }
+  });
+
+  // Ensure active front stereo pair (L, R) and subwoofer are vibrant
+  ["towerL", "towerR", "subwoofer"].forEach(id => {
+    const wrapper = document.getElementById("speaker-wrapper-" + id);
+    const card = document.getElementById("card-" + id);
+    if (wrapper && !state.solo.active) {
+      wrapper.classList.remove("speaker-stream-dimmed");
+    }
+    if (card) {
+      card.classList.remove("card-stream-dimmed");
+    }
+  });
+
+  // Update live stream badge
+  const badge = document.getElementById("badge-stream-mode");
+  if (badge) {
+    if (state.channelCount <= 2) {
+      badge.innerText = "STEREO 2.0";
+      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-400 border-zinc-700 cursor-default";
+      badge.title = "Hardware Output: Stereo 2.0 (Headphones/Laptop Speakers)";
+    } else if (isStereo) {
+      badge.innerText = "2.1 STEREO STREAM";
+      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 cursor-default";
+      badge.title = "Smart Auto-Detection: Stereo 2.1 audio stream detected. Center and Surround speakers dimmed.";
+    } else {
+      badge.innerText = "5.1 SURROUND ACTIVE";
+      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-amber-500/10 text-amber-400 border-amber-500/30 cursor-default";
+      badge.title = "Smart Auto-Detection: 5.1 Multi-channel audio stream active across all speakers.";
+    }
+  }
+}
+window.updateStreamTopologyUI = updateStreamTopologyUI;
+
 function animateSpeakerPulses() {
   if (!state.isSystemMuted) {
     pulseAngle += 0.10;
@@ -975,6 +1038,41 @@ function animateSpeakerPulses() {
     // Isolate pure sub-bass (<90Hz) using the Low-Pass Filter
     const rawSub = state.channelPeaks["subwoofer"] || 0.0;
     const isMultiChannel = (state.channelCount || 6) > 2;
+
+    // --- Smart Auto-Detection: Track Front vs Surround Activity ---
+    if (isMultiChannel) {
+      const frontEnergy = Math.max(state.channelPeaks["towerL"] || 0.0, state.channelPeaks["towerR"] || 0.0);
+      const surroundEnergy = Math.max(
+        state.channelPeaks["center"] || 0.0,
+        state.channelPeaks["surroundL"] || 0.0,
+        state.channelPeaks["surroundR"] || 0.0
+      );
+
+      const now = Date.now();
+      if (frontEnergy > 0.012 || peak > 0.02) {
+        lastFrontActiveTime = now;
+      }
+      if (surroundEnergy > 0.007) {
+        lastSurroundActiveTime = now;
+      }
+
+      // If audio is actively playing through front channels
+      if (now - lastFrontActiveTime < 2000) {
+        // If surround channels have had no signal for > 650ms while fronts play -> Stereo 2.1 Stream
+        if (now - lastSurroundActiveTime > 650) {
+          if (!isStereoStreamDetected) {
+            isStereoStreamDetected = true;
+            updateStreamTopologyUI(true);
+          }
+        } else {
+          // Surround audio is actively present -> 5.1 Multi-channel
+          if (isStereoStreamDetected) {
+            isStereoStreamDetected = false;
+            updateStreamTopologyUI(false);
+          }
+        }
+      }
+    }
 
     let trueBassEnergy = 0.0;
     if (isMultiChannel && rawSub > 0.005) {
@@ -1009,36 +1107,52 @@ function animateSpeakerPulses() {
     }
 
     ids.forEach(id => {
+      const isSurroundChannel = (id === "center" || id === "surroundL" || id === "surroundR");
+      const isDimmed = isMultiChannel && isStereoStreamDetected && isSurroundChannel && !state.solo.active;
+
       const vol = state.volumes[id] / 100;
       const rawChPeak = state.channelPeaks[id] || 0.0;
-      const chPeak = Math.max(rawChPeak, (peak > 0.03 ? peak * 0.35 : 0.0));
+      
+      // Dimmed surround channels remain stationary at 0 pulse
+      let chPeak = 0.0;
+      if (!isDimmed) {
+        chPeak = isMultiChannel ? rawChPeak : Math.max(rawChPeak, (peak > 0.03 ? peak * 0.35 : 0.0));
+      }
 
       const speaker = document.getElementById('speaker-wrapper-' + id);
       if (speaker) {
-        let multiplier = 0.05;
-        let pulseValue = chPeak;
-        if (id === "subwoofer") {
-          multiplier = 0.12;
-          pulseValue = Math.max(chPeak, currentBassGlow);
-        } else if (id === "surroundL" || id === "surroundR") {
-          multiplier = 0.04;
-        }
+        if (isDimmed) {
+          speaker.style.transform = "scale(0.96)";
+        } else {
+          let multiplier = 0.05;
+          let pulseValue = chPeak;
+          if (id === "subwoofer") {
+            multiplier = 0.12;
+            pulseValue = Math.max(chPeak, currentBassGlow);
+          } else if (id === "surroundL" || id === "surroundR") {
+            multiplier = 0.04;
+          }
 
-        const scale = 1 + (pulseValue * vol * multiplier);
-        speaker.style.transform = "scale(" + scale + ")";
+          const scale = 1 + (pulseValue * vol * multiplier);
+          speaker.style.transform = "scale(" + scale + ")";
+        }
       }
 
       const cone = document.getElementById('cone-' + id);
       if (cone) {
-        const driverVib = (id === "subwoofer") ? Math.max(chPeak, currentBassGlow) : chPeak;
-        const vibration = 1.0 + (vol * 0.16 * driverVib);
-        cone.style.transform = `scale(${vibration.toFixed(3)})`;
+        if (isDimmed) {
+          cone.style.transform = "scale(1)";
+        } else {
+          const driverVib = (id === "subwoofer") ? Math.max(chPeak, currentBassGlow) : chPeak;
+          const vibration = 1.0 + (vol * 0.16 * driverVib);
+          cone.style.transform = `scale(${vibration.toFixed(3)})`;
+        }
       }
 
       const glowLight = document.getElementById('glow-light-' + id);
       if (glowLight) {
-        if (vol === 0 || chPeak < 0.008) {
-          glowLight.style.opacity = '0.05';
+        if (isDimmed || vol === 0 || chPeak < 0.008) {
+          glowLight.style.opacity = isDimmed ? '0' : '0.05';
           glowLight.style.transform = 'scale(0.85)';
         } else {
           const glowOpacity = Math.min(1.0, (vol * 0.3) + (chPeak * 0.7 * vol));
@@ -1067,8 +1181,9 @@ function animateSpeakerPulses() {
     }
 
     ids.forEach(id => {
+      const isDimmed = isStereoStreamDetected && (id === "center" || id === "surroundL" || id === "surroundR") && !state.solo.active;
       const speaker = document.getElementById('speaker-wrapper-' + id);
-      if (speaker) speaker.style.transform = "scale(1)";
+      if (speaker) speaker.style.transform = isDimmed ? "scale(0.96)" : "scale(1)";
 
       const cone = document.getElementById('cone-' + id);
       if (cone) cone.style.transform = '';
@@ -1230,6 +1345,7 @@ function initTabsNavigation() {
   const tabs = [
     { tab: "studio", view: "view-mixer" },
     { tab: "room-cal", view: "view-room-cal" },
+    { tab: "scopes", view: "view-scopes" },
     { tab: "receiver", view: "view-receiver" },
     { tab: "settings", view: "view-settings" }
   ];
@@ -1259,12 +1375,18 @@ function initTabsNavigation() {
           }
         });
 
+        if (item.tab === "scopes") {
+          setTimeout(setupAllHighDpiCanvases, 50);
+        }
+
         const helper = document.getElementById("infoHelperText");
         if (helper) {
           if (item.tab === "studio") {
             helper.innerText = "Mixer cards simulate hardware output cabinets. Each cone dynamically vibrates to show active acoustic pressure.";
           } else if (item.tab === "room-cal") {
             helper.innerText = "Acoustic Room Corrections calibrate sound phase timings to establish optimal sweet-spot focus.";
+          } else if (item.tab === "scopes") {
+            helper.innerText = "Real-time 6-channel acoustic diagnostic oscilloscopes visualize laser waveform, peak amplitude, and dynamic harmonic telemetry.";
           } else if (item.tab === "receiver") {
             helper.innerText = "Receiver Console manages dynamic source profiles, hardware inputs, and ambient soundstage presets.";
           } else if (item.tab === "settings") {
@@ -1322,6 +1444,13 @@ export function applyDeviceTopology(isStereo, deviceName) {
       ddlBtn.title = "Dolby Digital Live (Unavailable for Stereo/Headphones)";
     }
 
+    const badge = document.getElementById("badge-stream-mode");
+    if (badge) {
+      badge.innerText = "STEREO 2.0";
+      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-400 border-zinc-700 cursor-default";
+      badge.title = "Hardware Output: Stereo 2.0 (Headphones/Laptop Speakers)";
+    }
+
   } else {
     // Reveal all 6 speakers
     if (surroundL) surroundL.classList.remove("hidden");
@@ -1340,6 +1469,9 @@ export function applyDeviceTopology(isStereo, deviceName) {
     if (lblTowerL) lblTowerL.innerText = "Tower L";
     if (lblTowerR) lblTowerR.innerText = "Tower R";
     if (sysMode) sysMode.innerText = "Dolby Digital for a Hometheater";
+
+    // Restore smart stream topology UI (Stereo 2.1 vs 5.1)
+    updateStreamTopologyUI(isStereoStreamDetected);
 
     // Re-enable Dolby button on 5.1 Surround devices
     const ddlBtn = document.getElementById("ddl-btn");
@@ -1370,6 +1502,10 @@ function initWindowsAudioSync() {
       applyDeviceTopology(devData.is_stereo, devData.device_name);
       showToast("Output Device Switched", `${devData.device_name} (${devData.is_stereo ? "Stereo 2.0" : "5.1 Surround"})`, "brand-blue");
     },
+    onDdlStatus: (ddlActive) => {
+      state.ddlActive = ddlActive;
+      updateDdlButtonUI();
+    },
     onFullStatus: (fullData) => {
       if (fullData.media) {
         applyMediaStatus(fullData.media);
@@ -1381,6 +1517,10 @@ function initWindowsAudioSync() {
       });
       if (typeof fullData.is_stereo === "boolean") {
         applyDeviceTopology(fullData.is_stereo, fullData.current_device);
+      }
+      if (typeof fullData.ddl_active === "boolean") {
+        state.ddlActive = fullData.ddl_active;
+        updateDdlButtonUI();
       }
     }
   });
@@ -1434,6 +1574,9 @@ document.addEventListener("DOMContentLoaded", () => {
   animateSpeakerPulses();
   refreshDevices();
   updateAppStatus();
+  initUpdater();
+  initBluetooth();
+  initChannelScopes();
   setInterval(pollVolumeChanges, 600);
 
   const devSelector = document.getElementById("deviceSelector");

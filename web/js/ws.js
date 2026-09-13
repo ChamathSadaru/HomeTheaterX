@@ -102,6 +102,10 @@ export async function initWebSocket(handlers = {}) {
         if (handlers.onDeviceChanged) {
           handlers.onDeviceChanged(payload);
         }
+      } else if (payload.type === "ddl_status") {
+        if (handlers.onDdlStatus && typeof payload.ddl_active === "boolean") {
+          handlers.onDdlStatus(payload.ddl_active);
+        }
       } else if (payload.type === "full_status") {
         if (handlers.onFullStatus) {
           handlers.onFullStatus(payload);

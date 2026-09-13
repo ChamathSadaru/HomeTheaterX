@@ -1,7 +1,7 @@
 ; HomeTheaterX Professional All-In-One Inno Setup Script
 #define MyAppName "HomeTheaterX"
-#define MyAppVersion "2.0"
-#define MyAppPublisher "Chamathz"
+#define MyAppVersion "2.1"
+#define MyAppPublisher "ChamathZ"
 #define MyAppURL "https://github.com/ChamathSadaru/HomeTheaterX-V2"
 #define MyAppExeName "HomeTheaterX.exe"
 
@@ -13,10 +13,15 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
+AppCopyright=Copyright (C) 2026 ChamathZ. All rights reserved.
+VersionInfoCompany=ChamathZ
+VersionInfoDescription=HomeTheaterX 5.1 Surround Sound DSP Controller
+VersionInfoVersion=2.1.0.0
+VersionInfoProductName=HomeTheaterX
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=dist
-OutputBaseFilename=HomeTheaterX_AllInOne_Setup_v2.0
+OutputBaseFilename=HomeTheaterX_AllInOne_Setup_v2.1
 SetupIconFile=Icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes

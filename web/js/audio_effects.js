@@ -499,6 +499,10 @@ export function applySoloVisuals() {
       }
     }
   });
+
+  if (window.updateStreamTopologyUI) {
+    window.updateStreamTopologyUI(state.isStereoStream || false);
+  }
 }
 
 // ------------------------------------------------------------------

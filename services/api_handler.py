@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler
 
 import config_manager
 import startup_manager
-from services import apo_service, dolby_service, media_service
+from services import apo_service, dolby_service, media_service, update_service, bluetooth_service
 
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     BASE_DIR = sys._MEIPASS
@@ -112,6 +112,21 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                 self._send_json({"status": "success", "ws_port": ws_port}, 200)
                 return
 
+            if path_only == "/api/updates/check":
+                info = update_service.update_manager.check_for_updates()
+                self._send_json({"status": "success", "data": info}, 200)
+                return
+
+            if path_only == "/api/updates/status":
+                status = update_service.update_manager.get_status()
+                self._send_json({"status": "success", "data": status}, 200)
+                return
+
+            if path_only == "/api/bluetooth/status":
+                status = bluetooth_service.bluetooth_service.get_bluetooth_status()
+                self._send_json(status, 200)
+                return
+
             if path_only == "/api/window/screens":
                 count = self.ui_manager.get_screen_count() if self.ui_manager else 1
                 self._send_json({"status": "success", "screen_count": count}, 200)
@@ -171,6 +186,17 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                     "ddl_active": ddl_active,
                     "active_preset": config_manager.get("active_preset")
                 })
+                return
+
+            if path_only == "/api/apo/check_ddl":
+                dev_target = getattr(self.backend, "current_device_name", None)
+                def _bg_check():
+                    is_on = dolby_service.check_dolby_state(target_device_name=dev_target)
+                    if self.set_ddl_state:
+                        self.set_ddl_state(is_on)
+                threading.Thread(target=_bg_check, daemon=True).start()
+                curr_state = self.get_ddl_state() if self.get_ddl_state else False
+                self._send_json({"status": "checking", "current_state": curr_state}, 200)
                 return
 
             if path_only == "/api/devices":
@@ -942,6 +968,35 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                         "calibration_restored": cal_restored
                     }
                     status_code = 200 if ok else 500
+
+            elif path_only == "/api/updates/download":
+                download_url = data.get("download_url") if isinstance(data, dict) else None
+                def _on_progress(state):
+                    if self.ws_manager:
+                        self.ws_manager.broadcast_sync({
+                            "type": "update_progress",
+                            "data": state
+                        })
+                res = update_service.update_manager.start_download(download_url, progress_callback=_on_progress)
+                response = {"status": "success", "result": res}
+                status_code = 200
+
+            elif path_only == "/api/updates/apply":
+                silent = data.get("silent", True) if isinstance(data, dict) else True
+                res = update_service.update_manager.apply_update_and_restart(silent=silent)
+                response = {"status": "success", "result": res}
+                status_code = 200
+
+            elif path_only == "/api/bluetooth/open_settings":
+                res = bluetooth_service.bluetooth_service.open_bluetooth_settings()
+                self._send_json(res, 200)
+                return
+
+            elif path_only == "/api/bluetooth/set_name":
+                new_name = data.get("name") if isinstance(data, dict) else ""
+                res = bluetooth_service.bluetooth_service.set_bluetooth_name(new_name)
+                self._send_json(res, 200)
+                return
 
             self._send_json(response, status_code)
         except (BrokenPipeError, ConnectionResetError):
