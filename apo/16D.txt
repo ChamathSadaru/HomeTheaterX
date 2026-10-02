@@ -1,0 +1,37 @@
+# =====================================================================
+# 16D Dual-Vortex Spatial Audio Profile (Mid-Side Stem Separation)
+# =====================================================================
+# This profile separates Lead Vocals (Mid / Center) from Ambient 
+# Melodies, Synths & Guitars (Sides) using phase-cancellation matrices.
+# =====================================================================
+
+Preamp: -4.5 dB
+
+If: inputChannelCount == 2
+
+    # [MID-SIDE ACOUSTIC STEM MATRIX]
+    # C (Center)    -> Lead Vocal Focus: Mid (L + R)
+    # RL (Surr L)   -> Pure Instrumental Melody: Side (L - R) cancels center vocal!
+    # RR (Surr R)   -> Pure Instrumental Melody: Side (R - L) cancels center vocal!
+    # L, R (Towers) -> Wide Hybrid Stereo Stage
+    # LFE (Sub)     -> Locked Bass Anchor (< 100 Hz)
+    Copy: C=0.707*L+0.707*R RL=1.0*L-1.0*R RR=1.0*R-1.0*L L=L R=R LFE=L+R
+
+    # 1. Lead Vocal Core Enhancement on Center Channel
+    # Peak presence boost at speech fundamentals (1.5 kHz - 3.5 kHz)
+    Channel: C
+    Filter: ON PK Fc 2200 Hz Gain 2.0 dB Q 1.2
+    Filter: ON HP Fc 200 Hz
+
+    # 2. Instrumental Air & Melody on Surround Channels
+    # High-pass filter to keep melody airy and eliminate low-frequency rumble
+    Channel: RL RR
+    Filter: ON HP Fc 280 Hz
+    Filter: ON PK Fc 4500 Hz Gain 1.8 dB Q 1.0
+
+    # 3. Subwoofer Anchor
+    Channel: LFE
+    Filter: ON LPQ Fc 100 Hz Q 0.707
+
+EndIf:
+# =====================================================================

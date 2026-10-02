@@ -42,7 +42,8 @@ Name: "installapo"; Description: "Install Equalizer APO 1.4 (Required for 5.1 DS
 ; Main Executable and Core Resources
 Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Icon.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Splash.jpg"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Splash.png"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "Splash.jpg"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "apo\*"; DestDir: "{app}\apo"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Equalizer APO Preset Templates Deployment
@@ -93,6 +94,7 @@ begin
                          '# Include: HallVibePreset.txt' + #13#10 +
                          '# Include: EchoPreset.txt' + #13#10 +
                          '# Include: 8D.txt' + #13#10 +
+                         '# Include: 16D.txt' + #13#10 +
                          '# Include: RoomCalibration.txt' + #13#10 +
                          '# Include: UpmixForRoomCalibration.txt' + #13#10 +
                          '# Include: RoomShaker.txt' + #13#10;

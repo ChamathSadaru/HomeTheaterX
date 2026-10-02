@@ -5,10 +5,12 @@ import sys
 
 block_cipher = None
 
+splash_file = 'Splash.png' if os.path.exists('Splash.png') else 'Splash.jpg'
+
 added_files = [
     ('web', 'web'),
     ('apo', 'apo'),
-    ('Splash.jpg', '.'),
+    (splash_file, '.'),
     ('Icon.ico', '.'),
 ]
 

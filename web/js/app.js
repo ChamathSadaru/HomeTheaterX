@@ -1013,25 +1013,57 @@ export function updateStreamTopologyUI(mode) {
     }
   });
 
-  // Update live stream badge
+  // Update stage backdrop watermark & live stream badge
+  const watermark = document.getElementById("stage-watermark-text");
   const badge = document.getElementById("badge-stream-mode");
+
+  let modeText = "5.1 STANDBY";
+  let modeClass = "mode-standby";
+
+  if (state.eightd && state.eightd.active) {
+    if (state.eightd.mode === "16d") {
+      modeText = "16D DUAL VORTEX";
+      modeClass = "mode-16d";
+    } else {
+      modeText = "8D SPATIAL";
+      modeClass = "mode-8d";
+    }
+  } else if (state.channelCount <= 2) {
+    modeText = "STEREO 2.0";
+    modeClass = "mode-stereo";
+  } else if (currentStreamMode === "stereo") {
+    modeText = "2.1 STEREO";
+    modeClass = "mode-stereo";
+  } else if (currentStreamMode === "surround") {
+    modeText = "5.1 SURROUND";
+    modeClass = "mode-surround";
+  } else {
+    modeText = "5.1 STANDBY";
+    modeClass = "mode-standby";
+  }
+
+  if (watermark) {
+    watermark.innerText = modeText;
+    watermark.className = `stage-watermark-stroke ${modeClass} text-6xl sm:text-7xl md:text-8xl lg:text-[110px] xl:text-[130px] font-black tracking-[0.12em] uppercase leading-none`;
+  }
+
   if (badge) {
     if (state.channelCount <= 2) {
       badge.innerText = "STEREO 2.0";
-      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-400 border-zinc-700 cursor-default";
+      badge.className = "hidden px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-400 border-zinc-700 cursor-default";
       badge.title = "Hardware Output: Stereo 2.0 (Headphones/Laptop Speakers)";
     } else if (currentStreamMode === "stereo") {
       badge.innerText = "2.1 STEREO STREAM";
-      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 cursor-default";
+      badge.className = "hidden px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 cursor-default";
       badge.title = "Smart Auto-Detection: Stereo 2.1 audio stream detected. Center and Surround speakers dimmed.";
     } else if (currentStreamMode === "surround") {
       badge.innerText = "5.1 SURROUND ACTIVE";
-      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-amber-500/10 text-amber-400 border-amber-500/30 cursor-default";
+      badge.className = "hidden px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-amber-500/10 text-amber-400 border-amber-500/30 cursor-default";
       badge.title = "Smart Auto-Detection: 5.1 Multi-channel audio stream active across all speakers.";
     } else {
       // Standby / Ready state: All 6 speakers clean and ready
       badge.innerText = "5.1 STANDBY";
-      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-300 border-zinc-700/60 cursor-default";
+      badge.className = "hidden px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-300 border-zinc-700/60 cursor-default";
       badge.title = "Home Theater 5.1 Ready: System on standby with all 6 channels ready.";
     }
   }
@@ -1459,10 +1491,16 @@ export function applyDeviceTopology(isStereo, deviceName) {
       ddlBtn.title = "Dolby Digital Live (Unavailable for Stereo/Headphones)";
     }
 
+    const watermark = document.getElementById("stage-watermark-text");
+    if (watermark) {
+      watermark.innerText = "STEREO 2.0";
+      watermark.className = "stage-watermark-stroke mode-stereo text-6xl sm:text-7xl md:text-8xl lg:text-[110px] xl:text-[130px] font-black tracking-[0.12em] uppercase leading-none";
+    }
+
     const badge = document.getElementById("badge-stream-mode");
     if (badge) {
       badge.innerText = "STEREO 2.0";
-      badge.className = "px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-400 border-zinc-700 cursor-default";
+      badge.className = "hidden px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-zinc-800/80 text-zinc-400 border-zinc-700 cursor-default";
       badge.title = "Hardware Output: Stereo 2.0 (Headphones/Laptop Speakers)";
     }
 

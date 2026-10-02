@@ -31,8 +31,9 @@
   "calibration_mode": "sweetspot",
   "active_preset": null,
   "preset_prev_state": {
-    "ddl": false,
+    "ddl": true,
     "eightd": false,
+    "sixteend": false,
     "calibration": false
   },
   "active_profile": "User",

@@ -53,9 +53,12 @@ export const state = {
 
   eightd: {
     active: false,
+    mode: "off", // "off" | "8d" | "16d"
     angle: 0,
+    angleMelody: 0,
     interval: null,
-    speed: 0.056,
+    speed: 0.052,
+    speedMelody: 0.074,
     originalVolumes: {},
     shouldRestoreDolby: false
   },

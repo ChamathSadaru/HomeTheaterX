@@ -237,30 +237,15 @@ export function initEightdRotation() {
 
 export async function toggleEightdRotation() {
   const btn = document.getElementById("eightd-btn");
-  if (state.eightd.active) {
-    const shouldRestore = state.eightd.shouldRestoreDolby;
-    const eightdSpinner = document.getElementById("eightd-spinner");
-    const eightdText = document.getElementById("eightd-text");
+  const eightdSpinner = document.getElementById("eightd-spinner");
+  const eightdText = document.getElementById("eightd-text");
 
-    if (shouldRestore) {
-      if (btn) btn.disabled = true;
-      if (eightdSpinner) eightdSpinner.classList.remove("hidden");
-      if (eightdText) eightdText.classList.add("hidden");
-    }
+  const currentMode = state.eightd.mode || (state.eightd.active ? "8d" : "off");
 
-    await stopEightdRotation();
-    if (btn) btn.classList.remove("eightd-active");
-    showToast("8D Mode Off", "Restored standard multi-channel gains.", "brand-blue");
-
-    if (shouldRestore) {
-      await toggleDdlMode(true);
-      state.eightd.shouldRestoreDolby = false;
-
-      if (eightdText) eightdText.classList.remove("hidden");
-      if (eightdSpinner) eightdSpinner.classList.add("hidden");
-      if (btn) btn.disabled = false;
-    }
-  } else {
+  if (currentMode === "off") {
+    // -------------------------------------------------------
+    // Transition: OFF -> 8D (Single 360 Spatial Orbit)
+    // -------------------------------------------------------
     if (state.sweepActive) {
       stopSequentialSweep();
     }
@@ -273,11 +258,7 @@ export async function toggleEightdRotation() {
     }
 
     if (state.ddlActive) {
-      const eightdSpinner = document.getElementById("eightd-spinner");
-      const eightdText = document.getElementById("eightd-text");
-
       state.eightd.shouldRestoreDolby = true;
-
       if (btn) btn.disabled = true;
       if (eightdSpinner) eightdSpinner.classList.remove("hidden");
       if (eightdText) eightdText.classList.add("hidden");
@@ -292,20 +273,87 @@ export async function toggleEightdRotation() {
     }
 
     await startEightdRotation();
-    if (btn) btn.classList.add("eightd-active");
-    showToast("8D Spatial Audio Active", "Audio rotating across surround soundstage.", "amber");
+
+    if (btn) {
+      btn.classList.remove("sixteend-active");
+      btn.classList.add("eightd-active");
+    }
+    if (eightdText) eightdText.innerText = "8D";
+    showToast("8D Spatial Audio Active", "Single audio orbit rotating across 5.1 stage.", "amber");
+
+  } else if (currentMode === "8d") {
+    // -------------------------------------------------------
+    // Transition: 8D -> 16D (Dual-Vortex Stem Separation)
+    // -------------------------------------------------------
+    if (btn) btn.disabled = true;
+    if (eightdSpinner) eightdSpinner.classList.remove("hidden");
+    if (eightdText) eightdText.classList.add("hidden");
+
+    // Stop 8D loop & APO
+    if (state.eightd.interval) {
+      clearInterval(state.eightd.interval);
+      state.eightd.interval = null;
+    }
+    await apiPost("/api/apo/toggle_8d", { enabled: false });
+
+    // Start 16D Dual-Vortex
+    await startSixteendRotation();
+
+    if (btn) {
+      btn.classList.remove("eightd-active");
+      btn.classList.add("sixteend-active");
+      btn.disabled = false;
+    }
+    if (eightdSpinner) eightdSpinner.classList.add("hidden");
+    if (eightdText) {
+      eightdText.innerText = "16D";
+      eightdText.classList.remove("hidden");
+    }
+    showToast("16D Dual-Vortex Active", "Vocals & Melody rotating counter-directionally across 5.1 stage.", "purple");
+
+  } else {
+    // -------------------------------------------------------
+    // Transition: 16D -> OFF
+    // -------------------------------------------------------
+    const shouldRestore = state.eightd.shouldRestoreDolby;
+    if (shouldRestore) {
+      if (btn) btn.disabled = true;
+      if (eightdSpinner) eightdSpinner.classList.remove("hidden");
+      if (eightdText) eightdText.classList.add("hidden");
+    }
+
+    await stopSpatialRotation();
+
+    if (btn) {
+      btn.classList.remove("eightd-active", "sixteend-active");
+    }
+    if (eightdText) eightdText.innerText = "8D";
+    showToast("Spatial Audio Off", "Restored standard multi-channel gains.", "brand-blue");
+
+    if (shouldRestore) {
+      await toggleDdlMode(true);
+      state.eightd.shouldRestoreDolby = false;
+
+      if (eightdText) eightdText.classList.remove("hidden");
+      if (eightdSpinner) eightdSpinner.classList.add("hidden");
+      if (btn) btn.disabled = false;
+    }
   }
 }
 
-async function startEightdRotation() {
+export async function startEightdRotation() {
   state.eightd.active = true;
+  state.eightd.mode = "8d";
+  document.body.classList.remove("sixteend-mode-active");
   document.body.classList.add("eightd-mode-active");
 
   await apiPost("/api/apo/toggle_8d", { enabled: true });
 
-  ids.forEach(id => {
-    state.eightd.originalVolumes[id] = state.volumes[id];
-  });
+  if (Object.keys(state.eightd.originalVolumes).length === 0) {
+    ids.forEach(id => {
+      state.eightd.originalVolumes[id] = state.volumes[id];
+    });
+  }
 
   state.eightd.angle = 0;
 
@@ -316,6 +364,10 @@ async function startEightdRotation() {
     surroundR: Math.PI * 1.75,
     surroundL: Math.PI * 1.25
   };
+
+  if (window.updateStreamTopologyUI) {
+    window.updateStreamTopologyUI();
+  }
 
   state.eightd.interval = setInterval(async () => {
     state.eightd.angle += state.eightd.speed;
@@ -337,7 +389,8 @@ async function startEightdRotation() {
       const targetAngle = speakerAngles[id];
       const alignment = Math.cos(state.eightd.angle - targetAngle);
       const intensity = Math.pow((alignment + 1) / 2, 2.5);
-      const targetVol = Math.round(intensity * 100);
+      const orig = state.eightd.originalVolumes[id] ?? 100;
+      const targetVol = Math.max(10, Math.round(intensity * (orig / 100) * 100));
 
       nextVols[channelIndexMap[id]] = targetVol;
       state.volumes[id] = targetVol;
@@ -348,15 +401,111 @@ async function startEightdRotation() {
   }, 80);
 }
 
-async function stopEightdRotation() {
-  state.eightd.active = false;
+export async function startSixteendRotation() {
+  state.eightd.active = true;
+  state.eightd.mode = "16d";
   document.body.classList.remove("eightd-mode-active");
+  document.body.classList.add("sixteend-mode-active");
+
+  await apiPost("/api/apo/toggle_16d", { enabled: true });
+
+  if (Object.keys(state.eightd.originalVolumes).length === 0) {
+    ids.forEach(id => {
+      state.eightd.originalVolumes[id] = state.volumes[id];
+    });
+  }
+
+  // Vocal starts at Front-Center (PI * 0.5)
+  // Melody starts at Rear-Left (PI * 1.25)
+  state.eightd.angle = Math.PI * 0.5;
+  state.eightd.angleMelody = Math.PI * 1.25;
+
+  const speakerAngles = {
+    towerL: Math.PI * 0.75,
+    center: Math.PI * 0.5,
+    towerR: Math.PI * 0.25,
+    surroundR: Math.PI * 1.75,
+    surroundL: Math.PI * 1.25
+  };
+
+  if (window.updateStreamTopologyUI) {
+    window.updateStreamTopologyUI();
+  }
+
+  state.eightd.interval = setInterval(async () => {
+    // 1. Vocal rotates Clockwise (decreasing angle)
+    state.eightd.angle -= state.eightd.speed;
+    if (state.eightd.angle < 0) {
+      state.eightd.angle += 2 * Math.PI;
+    }
+
+    // 2. Melody rotates Counter-Clockwise (increasing angle at faster harmonic rate)
+    state.eightd.angleMelody += state.eightd.speedMelody;
+    if (state.eightd.angleMelody >= 2 * Math.PI) {
+      state.eightd.angleMelody -= 2 * Math.PI;
+    }
+
+    const nextVols = {};
+
+    ids.forEach(id => {
+      if (id === "subwoofer") {
+        const origSub = state.eightd.originalVolumes["subwoofer"] ?? 100;
+        nextVols[channelIndexMap[id]] = origSub;
+        state.volumes[id] = origSub;
+        updateFaderUI(id, origSub);
+        return;
+      }
+
+      const targetAngle = speakerAngles[id];
+
+      // Vocal alignment & intensity curve
+      const vocalAlign = Math.cos(state.eightd.angle - targetAngle);
+      const vocalIntensity = Math.pow((vocalAlign + 1) / 2, 2.2);
+
+      // Melody alignment & intensity curve
+      const melodyAlign = Math.cos(state.eightd.angleMelody - targetAngle);
+      const melodyIntensity = Math.pow((melodyAlign + 1) / 2, 2.2);
+
+      // Channel specialization:
+      // Center (C) has lead vocal in APO 16D.txt
+      // Surrounds (RL, RR) have pure melody/synths (vocal canceled)
+      // Towers (L, R) carry front stereo balance
+      let combined = 0;
+      if (id === "center") {
+        combined = (vocalIntensity * 0.85) + (melodyIntensity * 0.15);
+      } else if (id === "surroundL" || id === "surroundR") {
+        combined = (melodyIntensity * 0.85) + (vocalIntensity * 0.15);
+      } else {
+        combined = (vocalIntensity * 0.50) + (melodyIntensity * 0.50);
+      }
+
+      const orig = state.eightd.originalVolumes[id] ?? 100;
+      const targetVol = Math.max(12, Math.min(100, Math.round(combined * (orig / 100) * 100)));
+
+      nextVols[channelIndexMap[id]] = targetVol;
+      state.volumes[id] = targetVol;
+      updateFaderUI(id, targetVol);
+    });
+
+    await apiPost("/api/channel_volumes_multi", { volumes: nextVols });
+  }, 80);
+}
+
+export async function stopEightdRotation() {
+  return stopSpatialRotation();
+}
+
+export async function stopSpatialRotation() {
+  state.eightd.active = false;
+  state.eightd.mode = "off";
+  document.body.classList.remove("eightd-mode-active", "sixteend-mode-active");
   if (state.eightd.interval) {
     clearInterval(state.eightd.interval);
     state.eightd.interval = null;
   }
 
   await apiPost("/api/apo/toggle_8d", { enabled: false });
+  await apiPost("/api/apo/toggle_16d", { enabled: false });
 
   const restoreVols = {};
   ids.forEach(id => {
@@ -365,8 +514,13 @@ async function stopEightdRotation() {
     updateFaderUI(id, orig);
     restoreVols[channelIndexMap[id]] = orig;
   });
+  state.eightd.originalVolumes = {};
 
   await apiPost("/api/channel_volumes_multi", { volumes: restoreVols });
+
+  if (window.updateStreamTopologyUI) {
+    window.updateStreamTopologyUI();
+  }
 }
 
 // ------------------------------------------------------------------
@@ -755,9 +909,13 @@ export function initAcousticPresets() {
   buttons.forEach(btn => {
     btn.addEventListener("click", async () => {
       if (state.eightd.active) {
-        stopEightdRotation();
+        stopSpatialRotation();
         const btn8d = document.getElementById("eightd-btn");
-        if (btn8d) btn8d.classList.remove("eightd-active");
+        if (btn8d) {
+          btn8d.classList.remove("eightd-active", "sixteend-active");
+          const eightdText = document.getElementById("eightd-text");
+          if (eightdText) eightdText.innerText = "8D";
+        }
       }
 
       const preset = btn.dataset.preset;
@@ -860,10 +1018,12 @@ export function initFilterPresets() {
             state.ddlActive = false;
             updateDdlButtonUI();
           }
-          if (res.eightd_disabled) {
-            stopEightdRotation();
+          if (res.eightd_disabled || res.sixteend_disabled) {
+            stopSpatialRotation();
             const btn8d = document.getElementById("eightd-btn");
-            if (btn8d) btn8d.classList.remove("eightd-active");
+            if (btn8d) btn8d.classList.remove("eightd-active", "sixteend-active");
+            const eightdText = document.getElementById("eightd-text");
+            if (eightdText) eightdText.innerText = "8D";
           }
           if (res.calibration_disabled) {
             state.settings.calibration_enabled = false;
@@ -880,7 +1040,22 @@ export function initFilterPresets() {
           if (res.eightd_restored) {
             startEightdRotation();
             const btn8d = document.getElementById("eightd-btn");
-            if (btn8d) btn8d.classList.add("eightd-active");
+            if (btn8d) {
+              btn8d.classList.remove("sixteend-active");
+              btn8d.classList.add("eightd-active");
+            }
+            const eightdText = document.getElementById("eightd-text");
+            if (eightdText) eightdText.innerText = "8D";
+          }
+          if (res.sixteend_restored) {
+            startSixteendRotation();
+            const btn8d = document.getElementById("eightd-btn");
+            if (btn8d) {
+              btn8d.classList.remove("eightd-active");
+              btn8d.classList.add("sixteend-active");
+            }
+            const eightdText = document.getElementById("eightd-text");
+            if (eightdText) eightdText.innerText = "16D";
           }
           if (res.calibration_restored) {
             state.settings.calibration_enabled = true;

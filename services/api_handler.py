@@ -45,8 +45,9 @@ class AudioControlHandler(BaseHTTPRequestHandler):
             candidate = os.path.join(WEB_DIR, "index.html")
         elif url_path.lstrip("/") in ("favicon.ico", "icon.ico"):
             candidate = os.path.join(BASE_DIR, "Icon.ico")
-        elif url_path.lstrip("/") == "samsung_splash.jpg":
-            candidate = os.path.join(BASE_DIR, "Splash.jpg")
+        elif url_path.lstrip("/") in ("samsung_splash.jpg", "samsung_splash.png", "Splash.jpg", "Splash.png"):
+            splash_img = os.path.join(BASE_DIR, "Splash.png") if os.path.exists(os.path.join(BASE_DIR, "Splash.png")) else os.path.join(BASE_DIR, "Splash.jpg")
+            candidate = splash_img
         else:
             clean_path = url_path.lstrip("/").split("?")[0]
             candidate = os.path.normpath(os.path.join(WEB_DIR, clean_path))
@@ -157,6 +158,7 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                 
                 bass_active = False
                 eightd_active = False
+                sixteend_active = False
                 config_path = os.path.join(apo_service.APO_CONFIG_DIR, "config.txt")
                 if os.path.exists(config_path):
                     try:
@@ -168,6 +170,8 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                                 bass_active = True
                             if "8D" in line and "Include" in line and not line_stripped.startswith("#"):
                                 eightd_active = True
+                            if "16D" in line and "Include" in line and not line_stripped.startswith("#"):
+                                sixteend_active = True
                     except Exception:
                         pass
 
@@ -183,6 +187,7 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                     "solo": self.backend.get_solo_status(),
                     "bass_management": bass_active,
                     "eightd_apo_active": eightd_active,
+                    "sixteend_apo_active": sixteend_active,
                     "ddl_active": ddl_active,
                     "active_preset": config_manager.get("active_preset")
                 })
@@ -416,6 +421,7 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                 self.backend.reset_balance()
                 apo_service.set_bass_management_state(False)
                 apo_service.set_apo_include_state("8D.txt", False)
+                apo_service.set_apo_include_state("16D.txt", False)
                 if self.notify_fn:
                     self.notify_fn(
                         "Balance Reset",
@@ -466,6 +472,7 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                 self.backend.stop_solo()
                 apo_service.set_bass_management_state(False)
                 apo_service.set_apo_include_state("8D.txt", False)
+                apo_service.set_apo_include_state("16D.txt", False)
                 response = {"status": "success", "solo": self.backend.get_solo_status()}
                 status_code = 200
 
@@ -828,12 +835,31 @@ class AudioControlHandler(BaseHTTPRequestHandler):
             elif path_only == "/api/apo/toggle_8d":
                 enabled = data.get("enabled", False)
                 if enabled:
+                    # Auto-disable 16D if active
+                    apo_service.set_apo_include_state("16D.txt", False)
                     # Auto-disable active presets
                     active_preset = config_manager.get("active_preset")
                     if active_preset:
                         apo_service.set_preset_state(active_preset, False)
                         config_manager.set("active_preset", None)
                 if apo_service.set_apo_include_state("8D.txt", enabled):
+                    response = {"status": "success", "enabled": enabled}
+                    status_code = 200
+                else:
+                    response = {"status": "error", "message": "Failed to update config.txt"}
+                    status_code = 500
+
+            elif path_only == "/api/apo/toggle_16d":
+                enabled = data.get("enabled", False)
+                if enabled:
+                    # Auto-disable 8D if active
+                    apo_service.set_apo_include_state("8D.txt", False)
+                    # Auto-disable active presets
+                    active_preset = config_manager.get("active_preset")
+                    if active_preset:
+                        apo_service.set_preset_state(active_preset, False)
+                        config_manager.set("active_preset", None)
+                if apo_service.set_apo_include_state("16D.txt", enabled):
                     response = {"status": "success", "enabled": enabled}
                     status_code = 200
                 else:
@@ -884,8 +910,9 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                     # 2. Capture and save current states of DDL, 8D, and Room Calibration
                     ddl_active = self.get_ddl_state() if self.get_ddl_state else False
                     
-                    # Read 8D active state from config.txt
+                    # Read 8D and 16D active state from config.txt
                     eightd_active = False
+                    sixteend_active = False
                     config_path = os.path.join(apo_service.APO_CONFIG_DIR, "config.txt")
                     if os.path.exists(config_path):
                         try:
@@ -894,6 +921,8 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                             for line in content.splitlines():
                                 if "8D.txt" in line and "Include" in line and not line.strip().startswith("#"):
                                     eightd_active = True
+                                if "16D.txt" in line and "Include" in line and not line.strip().startswith("#"):
+                                    sixteend_active = True
                         except Exception:
                             pass
                             
@@ -902,6 +931,7 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                     prev_state = {
                         "ddl": ddl_active,
                         "eightd": eightd_active,
+                        "sixteend": sixteend_active,
                         "calibration": cal_active
                     }
                     config_manager.set("preset_prev_state", prev_state)
@@ -915,6 +945,8 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                             
                     if eightd_active:
                         apo_service.set_apo_include_state("8D.txt", False)
+                    if sixteend_active:
+                        apo_service.set_apo_include_state("16D.txt", False)
                         
                     if cal_active:
                         apo_service.set_room_calibration_state(False)
@@ -929,7 +961,8 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                         "active_preset": preset_name,
                         "calibration_disabled": cal_active,
                         "ddl_disabled": ddl_active,
-                        "eightd_disabled": eightd_active
+                        "eightd_disabled": eightd_active,
+                        "sixteend_disabled": sixteend_active
                     }
                     status_code = 200 if ok else 500
                     
@@ -942,6 +975,7 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                     prev = config_manager.get("preset_prev_state", {}) or {}
                     ddl_restored = False
                     eightd_restored = False
+                    sixteend_restored = False
                     cal_restored = False
                     
                     dev_target = getattr(self.backend, "current_device_name", None)
@@ -954,6 +988,9 @@ class AudioControlHandler(BaseHTTPRequestHandler):
                     if prev.get("eightd"):
                         apo_service.set_apo_include_state("8D.txt", True)
                         eightd_restored = True
+                    if prev.get("sixteend"):
+                        apo_service.set_apo_include_state("16D.txt", True)
+                        sixteend_restored = True
                         
                     if prev.get("calibration"):
                         apo_service.set_room_calibration_state(True)

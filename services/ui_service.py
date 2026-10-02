@@ -167,8 +167,14 @@ class UIManager:
             self.splash_root.overrideredirect(True)
             self.splash_root.attributes("-topmost", True)
             
-            img_path = os.path.join(base_dir, "Splash.jpg")
-            if os.path.exists(img_path):
+            img_path = None
+            for candidate_name in ("Splash.png", "Splash.jpg", "Splash.jpeg", "Splash.webp"):
+                candidate_path = os.path.join(base_dir, candidate_name)
+                if os.path.exists(candidate_path):
+                    img_path = candidate_path
+                    break
+
+            if img_path and os.path.exists(img_path):
                 img = Image.open(img_path)
                 original_width, original_height = img.size
                 target_width = 600
@@ -197,8 +203,11 @@ class UIManager:
                 label.image = photo
                 
                 self.splash_root.mainloop()
-            else:
-                self.splash_root = None
+                try:
+                    self.splash_root.destroy()
+                except Exception:
+                    pass
+            self.splash_root = None
         except Exception as splash_err:
             print(f"Failed to display native splash screen: {splash_err}")
             self.splash_root = None
@@ -206,9 +215,12 @@ class UIManager:
     def destroy_splash(self):
         if self.splash_root:
             try:
-                self.splash_root.after(0, self.splash_root.destroy)
+                self.splash_root.after(0, self.splash_root.quit)
             except Exception:
-                pass
+                try:
+                    self.splash_root.destroy()
+                except Exception:
+                    pass
 
     def create_gui_window(self, port):
         win_w = 1152

@@ -527,7 +527,7 @@
                             Acoustic Stage Monitor
                         </div>
                         <span id="badge-stream-mode"
-                            class="px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-amber-500/10 text-amber-400 border-amber-500/30 cursor-default"
+                            class="hidden px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase border transition-all duration-300 bg-amber-500/10 text-amber-400 border-amber-500/30 cursor-default"
                             title="Smart Stream Channel Detection: Live Monitoring">
                             5.1 SURROUND
                         </span>
@@ -574,7 +574,7 @@
                         </button>
                         <button id="eightd-btn"
                             class="w-10 h-10 rounded-full bg-zinc-950 hover:bg-zinc-900 border border-zinc-850 text-zinc-400 hover:text-amber-500 flex items-center justify-center shadow-lg transition-all cursor-pointer"
-                            title="Toggle 8D Spatial Audio Rotation">
+                            title="Spatial Audio Engine: Click to cycle 8D (Single Orbit) -> 16D (Dual-Vortex Stem Orbit) -> OFF">
                             <i id="eightd-spinner"
                                 class="fa-solid fa-circle-notch fa-spin text-xs hidden text-amber-500"></i>
                             <span id="eightd-text"
@@ -609,6 +609,15 @@
                     <!-- Spotlight Top Glow -->
                     <div id="stage-spotlight-glow"
                         class="absolute top-0 left-1/2 -translate-x-1/2 w-[85%] h-[340px] bg-[radial-gradient(circle_at_center_top,rgba(245,158,11,0.07),transparent_70%)] pointer-events-none rounded-full blur-3xl transition-all duration-500">
+                    </div>
+
+                    <!-- Stage Backdrop Watermark (Massive Hollow Outline Typography Across Speaker Zone) -->
+                    <div id="stage-watermark-wrap"
+                        class="absolute top-[65px] bottom-[140px] inset-x-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
+                        <span id="stage-watermark-text"
+                            class="stage-watermark-stroke mode-standby text-6xl sm:text-7xl md:text-8xl lg:text-[110px] xl:text-[130px] font-black tracking-[0.12em] uppercase leading-none">
+                            5.1 STANDBY
+                        </span>
                     </div>
 
                     <!-- Speakers Grid (6 channels centered) -->

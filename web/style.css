@@ -52,6 +52,68 @@ html, body {
     transform: scale(1.04) !important;
 }
 
+/* --- Stage Backdrop Watermark (Hollow Outline Typography) --- */
+.stage-watermark-stroke {
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    font-weight: 900;
+    color: transparent !important;
+    -webkit-text-stroke: 2px rgba(255, 255, 255, 0.13);
+    letter-spacing: 0.10em;
+    line-height: 1;
+    white-space: nowrap;
+    text-transform: uppercase;
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.20;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                filter 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                -webkit-text-stroke 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: scale(1);
+}
+
+.stage-watermark-stroke.mode-stereo {
+    -webkit-text-stroke: 2.2px rgba(6, 182, 212, 0.38);
+    filter: drop-shadow(0 0 35px rgba(6, 182, 212, 0.25));
+    opacity: 0.30;
+}
+
+.stage-watermark-stroke.mode-surround {
+    -webkit-text-stroke: 2.2px rgba(245, 158, 11, 0.40);
+    filter: drop-shadow(0 0 40px rgba(245, 158, 11, 0.28));
+    opacity: 0.34;
+}
+
+.stage-watermark-stroke.mode-standby {
+    -webkit-text-stroke: 1.8px rgba(255, 255, 255, 0.12);
+    filter: none;
+    opacity: 0.16;
+}
+
+.stage-watermark-stroke.mode-8d {
+    -webkit-text-stroke: 2.2px rgba(245, 158, 11, 0.45);
+    filter: drop-shadow(0 0 35px rgba(245, 158, 11, 0.32));
+    opacity: 0.36;
+}
+
+.stage-watermark-stroke.mode-16d {
+    -webkit-text-stroke: 2.2px rgba(168, 85, 247, 0.50);
+    filter: drop-shadow(0 0 35px rgba(168, 85, 247, 0.35)) drop-shadow(0 0 50px rgba(6, 182, 212, 0.25));
+    opacity: 0.38;
+}
+
+/* Glass theme support */
+body.glass-mode-active .stage-watermark-stroke {
+    -webkit-text-stroke: 2.2px rgba(56, 189, 248, 0.32);
+    filter: drop-shadow(0 0 35px rgba(56, 189, 248, 0.24));
+}
+
+body.glass-mode-active .stage-watermark-stroke.mode-standby {
+    -webkit-text-stroke: 1.8px rgba(255, 255, 255, 0.14);
+    filter: none;
+    opacity: 0.16;
+}
+
 
 
 /* --- Locked Subwoofer Slider --- */
@@ -237,6 +299,37 @@ html, body {
 
     100% {
         transform: rotate(360deg);
+    }
+}
+
+/* --- 16D Dual-Vortex Active Rotating State --- */
+.sixteend-active {
+    border-color: rgba(168, 85, 247, 0.9) !important;
+    color: #c084fc !important;
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, rgba(6, 182, 212, 0.16) 100%) !important;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.55), inset 0 0 10px rgba(6, 182, 212, 0.3) !important;
+    transform: scale(1.06);
+}
+
+.sixteend-active span {
+    animation: rotate-16d-text 3.2s linear infinite;
+    display: inline-block;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    background: linear-gradient(135deg, #c084fc 0%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+@keyframes rotate-16d-text {
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.12);
+    }
+    100% {
+        transform: rotate(360deg) scale(1);
     }
 }
 
